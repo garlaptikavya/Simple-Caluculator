@@ -1,0 +1,412 @@
+#include <lpc21xx.h>
+#include <string.h>
+#define LCD (0xff<<8)
+#define RS (1<<16)
+#define RW (1<<17)
+#define EN (1<<18)
+ 
+#define r1 (1<<16)
+#define r2 (1<<17)
+#define r3 (1<<18)
+#define r4 (1<<19)
+#define c1 (1<<20)
+#define c2 (1<<21)
+#define c3 (1<<22)
+#define c4 (1<<23)
+#define Error  13 
+
+
+void cct_init(void);
+void delay(unsigned int time);           // variable delay function 
+void lcdinit(void);
+void writeline(char[]);
+void ReturnHome(void);
+char get_key(void);
+int get_num(char);
+char get_func(char);
+void DispError(int);
+void disp_num(int);	
+void writecmd(unsigned char command);
+void writedata(unsigned int data);
+void keypad_delay(void);
+unsigned char READ_SWITCHES(void);
+ 
+ 
+/*void delay(unsigned int time);           // variable delay function
+ 
+void lcd_ini(void);
+void lcd_print(char *str);
+void lcd_cmd(unsigned char command);
+void lcd_dat(unsigned int data);
+ 
+unsigned char keypad (void);
+void keypad_delay(void);*/
+ 
+ 
+ 
+ int main(void)
+{
+   char key;                     //key char for keeping record of pressed key
+   int num1 = 0;                 //First number
+   char func = '+';              //Function to be performed among two numbers
+   int num2 = 0;                 //Second number
+   
+   cct_init();                   //Make input and output pins as required
+   lcdinit();                    //Initilize LCD
+   while(1)
+   { 
+     //get numb1
+     key = get_key();
+     writecmd(0x01);            //clear display 
+	   writedata(key);            //Echo the key pressed to LCD
+	   num1 = get_num(key);       //Get int number from char value, it checks for wrong input as well
+     
+	 if(num1!=Error)            //if correct input then proceed, num1==Error means wrong input
+	 {
+		 //get function
+		 key = get_key();
+		 writedata(key);                  //Echo the key pressed to LCD
+		 func = get_func(key);            //it checks for wrong func
+		 
+		 if(func!='e')                    //if correct input then proceed, func=='e' means wrong input
+		 {
+			 //get numb2
+			 key = get_key();
+			 writedata(key);              //Echo the key pressed to LCD
+			 num2 = get_num(key);         //Get int number from char value, it checks for wrong input as well
+			 
+			 if(num2!=Error)              //if correct input then proceed, num2==Error means wrong input
+			 {
+				 //get equal sign
+				 key = get_key();
+				 writedata(key);          //Echo the key pressed to LCD
+				 
+				 if(key == '=')           //if = is pressed then proceed
+				 {
+					 switch(func)         //switch on function
+					 {
+					 case '+': disp_num(num1+num2); break;
+					 case '-': disp_num(num1-num2); break;
+					 case '*': disp_num(num1*num2); break;
+					 case '/': disp_num(num1/num2); break;
+					 }
+				 }
+				 else				      //key other then = here means error wrong input
+				 { 
+					 if(key == 'C')       //if clear screen is pressed then clear screen and reset
+					 {
+					    writecmd(0x01);   //Clear Screen
+					 }
+					 else
+					 {
+					 	DispError(0); 	  //Display wrong input error
+					 }
+				 }                                 
+			 }
+		 }
+     }
+   }
+}
+ 
+  
+void cct_init(void)
+   {
+        PINSEL0 = 0x00000000;
+        IODIR0 = 0Xffffffff;
+        PINSEL1 = 0x00000000;
+        IODIR1 = 0x00f00000;
+        
+        /*lcd_ini();
+        lcd_print("Press any key");
+        lcd_cmd(0xc0);
+ 
+        while(1)
+          {
+                lcd_dat(keypad());
+          } 
+        return 0;*/
+   }
+ 
+void keypad_delay(void)
+   {
+        unsigned int t1,t2;
+        for(t1=0;t1<300;t1++)                 
+                for(t2=0;t2<1275;t2++);
+   }
+ 
+unsigned char READ_SWITCHES(void)
+   {
+        unsigned char key;
+        IOCLR1|=(c1|c2|c3|c4|r1|r2|r3|r4);
+        while(1)
+           {
+                IOCLR1|=c1;
+                IOSET1|=(c2|c3|c4);                     // first column = 0
+                
+                if((IOPIN1&r1)==0)
+                   {
+                        key='7';
+                        keypad_delay();
+                        return key;
+                   }
+                else if((IOPIN1&r2)==0)
+                  {
+                        key='8';
+                        keypad_delay();
+                        return key;
+                  }
+                else if((IOPIN1&r3)==0)
+                  {
+                        key='9';
+                        keypad_delay();
+                        return key;
+                  }
+                else if((IOPIN1&r4)==0)
+                  {
+                        key='/';
+                        keypad_delay();
+                        return key;
+                  }
+                
+                IOCLR1|=c2;
+                IOSET1|=(c1|c3|c4);                     //second column = 0
+                
+                if((IOPIN1&r1)==0)
+                  {
+                        key='4';
+                        keypad_delay();
+                        return key;
+                  }
+                else if((IOPIN1&r2)==0)
+                  {
+                        key='5';
+                        keypad_delay();
+                        return key;
+                  }
+                else if((IOPIN1&r3)==0)
+                  {
+                        key='6';
+                        keypad_delay();
+                        return key;
+                  }
+                else if((IOPIN1&r4)==0)
+                  {
+                        key='*';
+                        keypad_delay();
+                        return key;
+                  }
+                
+                IOCLR1|=c3;
+                IOSET1|=(c1|c2|c4);                     //third column = 0
+ 
+                if((IOPIN1&r1)==0)
+                  {
+                        key='1';
+                        keypad_delay();
+                        return key;
+                  }
+                else if((IOPIN1&r2)==0)
+                  {
+                        key='2';
+                        keypad_delay();
+                        return key;
+                  }
+                else if((IOPIN1&r3)==0)
+                  {
+                        key='3';
+                        keypad_delay();
+                        return key;
+                  }
+                else if((IOPIN1&r4)==0)
+                  {
+                        key='-';
+                        keypad_delay();
+                        return key;
+                  }
+                
+                IOCLR1|=c4;
+                IOSET1|=(c1|c2|c3);                     //forth column = 0
+ 
+                if((IOPIN1&r1)==0)
+                  {     
+                        key='C';
+                        keypad_delay();
+                        return key;
+                        
+                  }
+                else if((IOPIN1&r2)==0)
+                  {
+                        key='0';
+                        keypad_delay();
+                        return key;
+                  }
+                else if((IOPIN1&r3)==0)
+                  {
+                        key='=';
+                        keypad_delay();
+                        return key;
+                  }
+                else if((IOPIN1&r4)==0)
+                  {
+                        key='+';
+                        keypad_delay();
+                        return key;
+                  }
+          }
+   }
+ 
+void writecmd(unsigned char command)
+  {
+        IO0CLR|=(RS|RW|EN|LCD);
+        IO0SET|=(command<<8);
+        IO0CLR|=RS;
+        IO0CLR|=RW;
+        IO0SET|=EN;
+        delay(2);
+        IO0CLR|=EN;
+        delay(3);
+  }
+  
+void writedata(unsigned int data)        
+  {
+        IO0CLR|=(RS|RW|EN|LCD);
+        IO0SET|=(data<<8);
+        IO0SET|=RS;
+        IO0CLR|=RW;
+        IO0SET|=EN;
+        delay(2);
+        IO0CLR|=EN;
+        delay(3);
+  }
+ 
+/*void lcd_print(char *str)
+  {
+        while(*str!='\0')
+          {
+                lcd_dat(*str);
+                str++;
+          }
+  }*/
+ 
+void lcdinit(void)
+  {
+        delay(5);
+        writecmd(0X38);
+        writecmd(0X0f);
+        writecmd(0X06);
+        writecmd(0X01);
+        delay(5);
+        writecmd(0X80);
+  }
+ 
+void delay(unsigned int time)           // variable delay function 
+  {
+        unsigned int t1,t2;
+        for(t1=0;t1<time;t1++)       
+                for(t2=0;t2<1275;t2++);
+  }
+
+	void writeline(char Line[])
+{
+   int i;
+   for(i=0;i<strlen(Line);i++)
+   {
+      writedata(Line[i]);     /* Write Character */
+   }
+   
+   ReturnHome();          /* Return to 0 cursor position */
+}
+
+
+	char get_key(void)           //get key from user
+{
+	char key = 'n';              //assume no key pressed
+
+	while(key=='n')              //wait untill a key is pressed
+		key = READ_SWITCHES();   //scan the keys again and again
+
+	return key;                  //when key pressed then return its value
+}
+	
+	
+	int get_num(char ch)         //convert char into int
+{
+	switch(ch)
+	{
+		case '0': return 0; break;
+		case '1': return 1; break;
+		case '2': return 2; break;
+		case '3': return 3; break;
+		case '4': return 4; break;
+		case '5': return 5; break;
+		case '6': return 6; break;
+		case '7': return 7; break;
+		case '8': return 8; break;
+		case '9': return 9; break;
+		case 'C': writecmd(0x01); return Error; break;  //this is used as a clear screen and then reset by setting error
+		default: DispError(0); return Error; break;     //it means wrong input
+	}
+}
+	
+	
+	
+	void ReturnHome(void)     /* Return to 0 cursor location */
+{
+   writecmd(0x02);
+   delay(1500);
+   
+}
+
+	
+	char get_func(char chf)            //detects the errors in inputted function
+{
+	if(chf=='C')                   //if clear screen then clear the LCD and reset
+	{ 
+		writecmd(0x01);            //clear display
+		return 'e'; 
+	}
+	
+	if( chf!='+' && chf!='-' && chf!='*' && chf!='/' )  //if input is not from allowed funtions then show error
+	{ 
+		DispError(1); 
+		return 'e'; 
+	}
+
+	return chf;                        //function is correct so return the correct function
+}
+	
+	
+	void DispError(int numb)           //displays differet error messages
+{
+	writecmd(0x01);                //clear display
+	switch(numb)
+	{
+	case 0: 	writeline("Wrong Input");      break;
+	case 1: 	writeline("Wrong Function");   break;
+	default:    writeline("Wrong Input");      break;
+	}
+}
+	
+	
+	
+void disp_num(int numb)            //displays number on LCD
+{	
+	unsigned char UnitDigit  = 0;  //It will contain unit digit of numb
+	unsigned char TenthDigit = 0;  //It will contain 10th position digit of numb
+
+	if(numb<0)
+	{
+		numb = -1*numb;  // Make number positive
+		writedata('-');	 // Display a negative sign on LCD
+	}
+
+	TenthDigit = (numb/10);	          // Findout Tenth Digit
+
+	if( TenthDigit != 0)          // If it is zero, then don't display
+		writedata(TenthDigit+0x30);	  // Make Char of TenthDigit and then display it on LCD
+
+	UnitDigit = numb - TenthDigit*10;
+
+	writedata(UnitDigit+0x30);	  // Make Char of UnitDigit and then display it on LCD
+  
+}
