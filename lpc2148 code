@@ -19,7 +19,8 @@
 void cct_init(void);
 void delay(unsigned int time);           // variable delay function 
 void lcdinit(void);
-void writeline(char[]);
+void writeline(char *str);
+//void writeline(char[]);
 void ReturnHome(void);
 char get_key(void);
 int get_num(char);
@@ -279,14 +280,7 @@ void writedata(unsigned int data)
         delay(3);
   }
  
-/*void lcd_print(char *str)
-  {
-        while(*str!='\0')
-          {
-                lcd_dat(*str);
-                str++;
-          }
-  }*/
+
  
 void lcdinit(void)
   {
@@ -306,17 +300,25 @@ void delay(unsigned int time)           // variable delay function
                 for(t2=0;t2<1275;t2++);
   }
 
-	void writeline(char Line[])
+/*	void writeline(char Line[])
 {
    int i;
    for(i=0;i<strlen(Line);i++)
    {
-      writedata(Line[i]);     /* Write Character */
+      writedata(Line[i]);      Write Character 
    }
    
-   ReturnHome();          /* Return to 0 cursor position */
-}
+   ReturnHome();           Return to 0 cursor position 
+}*/
 
+void writeline(char *str)
+  {
+        while(*str!='\0')
+          {
+                writedata(*str);
+                str++;
+          }
+  }
 
 	char get_key(void)           //get key from user
 {
